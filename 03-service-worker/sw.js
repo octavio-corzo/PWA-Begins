@@ -9,7 +9,7 @@ self.addEventListener("install", (event) => {
       //Actualizacion del service worker sin cerrar las tabs
       self.skipWaiting();
       resolve();
-    }, 0);
+    }, 1);
   });
 
   //Espera hasta que termine de realizar un proceso
@@ -26,11 +26,17 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   //Aplicar estrategias del cache
-  console.log("SW", event.request.url);
+  // console.log("SW", event.request.url);
+  // if (event.request.url.includes("https://reqres.in/")) {
+  //   const resp = new Response(`{ok: false, mensaje: 'jajaja'}`);
+  //   event.respondWith(resp);
+  // }
+});
 
-  if (event.request.url.includes("https://reqres.in/")) {
-    const resp = new Response(`{ok: false, mensaje: 'jajaja'}`);
+//SYNC: Cuando recuperamos la conexion a internet
 
-    event.respondWith(resp);
-  }
+self.addEventListener("sync", (event) => {
+  console.log("Tenemos conexion");
+  console.log(event);
+  console.log(event.tag);
 });
