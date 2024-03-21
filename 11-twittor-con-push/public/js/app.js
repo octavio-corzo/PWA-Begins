@@ -1,12 +1,17 @@
 var url = window.location.href;
 var swLocation = "/twittor/sw.js";
-
+var swReg;
 if (navigator.serviceWorker) {
   if (url.includes("localhost")) {
     swLocation = "/sw.js";
   }
 
-  navigator.serviceWorker.register(swLocation);
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register(swLocation).then(function (reg) {
+      swReg = reg;
+      swReg.pushManager.getSubscription().then(verificaSuscripcion);
+    });
+  });
 }
 
 // Referencias de jQuery
@@ -24,10 +29,13 @@ var modalAvatar = $("#modal-avatar");
 var avatarBtns = $(".seleccion-avatar");
 var txtMensaje = $("#txtMensaje");
 
+var btnActivadas = $(".btn-noti-activadas");
+var btnDesactivadas = $(".btn-noti-desactivadas");
+
 // El usuario, contiene el ID del hÃ©roe seleccionado
 var usuario;
 
-// ===== Codigo de la aplicaciÃ³n
+// ===== Codigo de la aplicación
 
 function crearMensajeHTML(mensaje, personaje) {
   var content = `
@@ -134,39 +142,38 @@ postBtn.on("click", function () {
   })
     .then((res) => res.json())
     .then((res) => console.log("app.js", res))
-    .catch((err) => console.log("app.js error", err));
+    .catch((err) => console.log("app.js error:", err));
+
   crearMensajeHTML(mensaje, usuario);
 });
 
+// Obtener mensajes del servidor
 function getMensajes() {
   fetch("api")
     .then((res) => res.json())
     .then((posts) => {
       console.log(posts);
-
-      posts.forEach((post) => {
-        crearMensajeHTML(post.mensaje, post.user);
-      });
+      posts.forEach((post) => crearMensajeHTML(post.mensaje, post.user));
     });
 }
 
 getMensajes();
 
-//Detectar cambios de conexion
+// Detectar cambios de conexión
 function isOnline() {
   if (navigator.onLine) {
-    //tenemos conexion
-    // console.log("online");
+    // tenemos conexión
+    // console.log('online');
     $.mdtoast("Online", {
       interaction: true,
-      interationTimeout: 5000,
-      actionText: "Ok",
+      interactionTimeout: 1000,
+      actionText: "OK!",
     });
   } else {
-    //no tenemos conexion
+    // No tenemos conexión
     $.mdtoast("Offline", {
       interaction: true,
-      actionText: "Ok",
+      actionText: "OK",
       type: "warning",
     });
   }
@@ -176,3 +183,84 @@ window.addEventListener("online", isOnline);
 window.addEventListener("offline", isOnline);
 
 isOnline();
+
+//Notificaciones
+
+const verificaSuscripcion = (activadas) => {
+  console.log(activadas);
+  if (activadas) {
+    btnActivadas.removeClass("oculto");
+    btnDesactivadas.addClass("oculto");
+  } else {
+    btnActivadas.addClass("oculto");
+    btnDesactivadas.removeClass("oculto");
+  }
+};
+
+const enviarNotificacion = () => {
+  const notificationOpts = {
+    body: "cuerpo",
+    icon: "img/icons/icon-72x72.png",
+  };
+  const n = new Notification("Hola Mundo", notificationOpts);
+  n.onclick = () => {
+    console.log("click");
+  };
+};
+
+const notificarme = () => {
+  if (!window.Notification) {
+    console.log("Este navegador no soporta notificaciones");
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    // new Notification("Hola mundo! - granted");
+    enviarNotificacion();
+  } else if (
+    Notification.permission !== "denied" ||
+    Notification.permission === "default"
+  ) {
+    Notification.requestPermission((permission) => {
+      if (permission === "granted") {
+        // new Notification("Hola mundo! - pregunta");
+        enviarNotificacion();
+      }
+    });
+  }
+};
+
+// notificarme();
+
+//get key
+const getPublicKey = () => {
+  return (
+    fetch("api/key") // Asegúrate de devolver la promesa de fetch
+      .then((res) => res.arrayBuffer())
+      // Asegúrate de devolver el resultado como una promesa que resuelve a Uint8Array
+      .then((key) => new Uint8Array(key))
+  );
+};
+
+btnDesactivadas.on("click", function () {
+  if (!swReg) return console.log("No hay registro de SW");
+
+  getPublicKey().then(function (key) {
+    swReg.pushManager
+      .subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: key,
+      })
+      .then((res) => res.toJSON())
+      .then((suscripcion) => {
+        // console.log(suscripcion);
+        fetch("api/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(suscripcion),
+        })
+          .then(verificaSuscripcion)
+          .catch(console.log);
+      });
+  });
+});

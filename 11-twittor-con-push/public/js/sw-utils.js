@@ -24,15 +24,22 @@ function actualizaCacheStatico(staticCache, req, APP_SHELL_INMUTABLE) {
   }
 }
 
-//Network with cache fallback / update
+// Network with cache fallback / update
 function manejoApiMensajes(cacheName, req) {
-  if (req.clone().method === "POST") {
+  if (
+    req.url.indexOf("/api/key") >= 0 ||
+    req.url.indexOf("/api/subscribe") >= 0
+  ) {
+    return fetch(req);
+  } else if (req.clone().method === "POST") {
+    // POSTEO de un nuevo mensaje
+
     if (self.registration.sync) {
       return req
         .clone()
         .text()
         .then((body) => {
-          console.log(body);
+          // console.log(body);
           const bodyObj = JSON.parse(body);
           return guardarMensaje(bodyObj);
         });
