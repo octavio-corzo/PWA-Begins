@@ -9,6 +9,11 @@
         "dev": "nodemon server/server.js",
         "vapid": "node node_modules/web-push/src/cli.js generate-vapid-keys --json > server/vapid.json"
     },
+    "nodemonConfig": {
+        "ignore": [
+            "server/*.json"
+        ]
+    },
     "author": "",
     "license": "ISC",
     "dependencies": {

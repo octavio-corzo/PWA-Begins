@@ -264,3 +264,13 @@ btnDesactivadas.on("click", function () {
       });
   });
 });
+
+function cancelarSubscripcion() {
+  swReg.pushManager.getSubscription().then((subs) => {
+    subs.unsubscribe().then(() => verificaSuscripcion(false));
+  });
+}
+
+btnActivadas.on("click", function () {
+  cancelarSubscripcion();
+});
